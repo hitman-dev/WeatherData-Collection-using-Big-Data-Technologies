@@ -1,0 +1,13 @@
+
+###### Make a crontab using "crontab -e" command and put these command in that and change file paths accordingly
+
+
+
+###### Pulling Data from API after every Hour
+0 * * * * /home/home/hitman/MINI_PROJECT/Datapull.py
+
+###### Putting Data Into dq_good 15 minutes after every hour 
+15 * * * * /home//home/hitman/MINI_PROJECT/DataInject.py
+
+###### Inserting data into partitioned Hive Table 20 minutes after every hour (5 minutes after putting data into dq_good)  
+20 * * * * /home/hitman/DBDA_HOME/apache-hive-2.3.9-bin/bin/hive -f /home/hitman/DBDA_HOME/apache-hive-2.3.9-bin/bin/miniproject.hql

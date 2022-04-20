@@ -1,0 +1,43 @@
+
+############ Follow these Instructions to make the ETL process automatic ########
+
+1. start hdfs   -> start-dfs.sh
+
+2. start yarn   -> start-yarn.sh
+
+3. start spark  -> start-master.sh
+
+4. start worker -> start-worker.sh spark://ubuntu:7077
+
+5. Create a directory "miniproject" in HDFS -> hdfs dfs -mkdir /miniproject
+
+6. Create a directory "raw" in miniproject in HDFS -> hdfs dfs -mkdir /miniproject/raw
+
+7. Create a directory "dq_good" in raw in miniproject in HDFS -> hdfs dfs -mkdir /miniproject/raw/dq_good
+
+8. Create a directory "persist" in raw in miniproject in HDFS -> hdfs dfs -mkdir /miniproject/raw/persist
+
+9. From "Miniproject" folder copy "miniproject.hql" file into $HIVE_HOME/  -> cp miniproject.hql $HIVE_HOME/
+
+10. From "Miniproject" folder copy "hiveQuery.hql" file into $HIVE_HOME/  -> cp hiveQuery.hql $HIVE_HOME/
+
+11. Start hive and create database and table according to "hiveQuery.hql" file or follow commands as used in "hiveoutput.txt" file
+   "OR to automate the proces run the following command" ->
+   /home/hitman/DBDA_HOME/apache-hive-2.3.9-bin/bin/hive -f /home/hitman/DBDA_HOME/apache-hive-2.3.9-bin/bin/hiveQuery.hql
+   (Make changes according to your system file arrangements)
+   
+12. Make a crontab according "cronjob.txt" file
+
+13. Done
+
+################################# API Websites Links ############################################
+
+1. https://openweathermap.org/
+2. https://aqicn.org//here/
+
+Register and sign in on the above and get your API ket
+
+1. From first API (https://openweathermap.org/) we are getting weather data from all available weather station in INDIA.
+2. From second API (https://aqicn.org//here/) we are getting locaation of all the weather stations in india ,which is usef as a input parameter for first API (https://openweathermap.org/)
+
+#################################################################################################

@@ -1,0 +1,265 @@
+Hive Data Injection and MapReduce Output
+
+
+Output:-
+-----------------------------------------------------------------------------------
+
+hitman@ubuntu:~$ cd DBDA_HOME/
+hitman@ubuntu:~/DBDA_HOME$ cd $HADOOP_HOME
+hitman@ubuntu:~/DBDA_HOME/hadoop-3.3.1$ start-dfs.sh
+Starting namenodes on [localhost]
+localhost: namenode is running as process 3051.  Stop it first and ensure /tmp/hadoop-hitman-namenode.pid file is empty before retry.
+Starting datanodes
+localhost: datanode is running as process 3196.  Stop it first and ensure /tmp/hadoop-hitman-datanode.pid file is empty before retry.
+Starting secondary namenodes [ubuntu]
+ubuntu: secondarynamenode is running as process 3384.  Stop it first and ensure /tmp/hadoop-hitman-secondarynamenode.pid file is empty before retry.
+hitman@ubuntu:~/DBDA_HOME/hadoop-3.3.1$ cd $HIVE_HOME
+hitman@ubuntu:~/DBDA_HOME/apache-hive-2.3.9-bin$ bin/hive       
+SLF4J: Class path contains multiple SLF4J bindings.
+SLF4J: Found binding in [jar:file:/home/hitman/DBDA_HOME/apache-hive-2.3.9-bin/lib/log4j-slf4j-impl-2.6.2.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: Found binding in [jar:file:/home/hitman/DBDA_HOME/hadoop-3.3.1/share/hadoop/common/lib/slf4j-log4j12-1.7.30.jar!/org/slf4j/impl/StaticLoggerBinder.class]
+SLF4J: See http://www.slf4j.org/codes.html#multiple_bindings for an explanation.
+SLF4J: Actual binding is of type [org.apache.logging.slf4j.Log4jLoggerFactory]
+
+Logging initialized using configuration in jar:file:/home/hitman/DBDA_HOME/apache-hive-2.3.9-bin/lib/hive-common-2.3.9.jar!/hive-log4j2.properties Async: true
+Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+WARNING: An illegal reflective access operation has occurred
+WARNING: Illegal reflective access by org.apache.hadoop.hive.common.StringInternUtils (file:/home/hitman/DBDA_HOME/apache-hive-2.3.9-bin/lib/hive-common-2.3.9.jar) to field java.net.URI.string
+WARNING: Please consider reporting this to the maintainers of org.apache.hadoop.hive.common.StringInternUtils
+WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
+WARNING: All illegal access operations will be denied in a future release
+hive> show databases;
+OK
+default
+test
+Time taken: 4.988 seconds, Fetched: 2 row(s)
+hive> create table weather_data_parquet (
+    >     cityname string,
+    >     datetime BIGINT,
+    >     temp_K double,
+    >     pressure BIGINT,
+    >     humidity_percent BIGINT,
+    >     windspeed_mps double,
+    >     cloudiness_percent BIGINT
+    >     )
+    > row format delimited
+    > fields terminated by ',' 
+    > stored as parquet
+    > location 'hdfs://localhost:9000/miniproject/raw/persist/date.parquet';
+OK
+Time taken: 0.766 seconds
+hive> create table weather_data_partitioned (
+    >     datetime BIGINT,
+    >     temp_K double,
+    >     pressure BIGINT,
+    >     humidity_percent BIGINT,
+    >     windspeed_mps double,
+    >     cloudiness_percent BIGINT
+    >     )
+    >     PARTITIONED BY(cityname string);
+OK
+Time taken: 0.541 seconds
+hive> set hive.exec.dynamic.partition=true; 
+hive> set hive.exec.dynamic.partition.mode=nonstrict;
+hive> SET hive.exec.max.dynamic.partitions=1000;
+hive> SET hive.exec.max.dynamic.partitions.pernode=1000;
+hive> INSERT OVERWRITE TABLE weather_data_partitioned PARTITION(cityname)
+    > SELECT datetime,temp_K,pressure,humidity_percent,
+    > windspeed_mps,cloudiness_percent,cityname from weather_data_parquet;
+WARNING: Hive-on-MR is deprecated in Hive 2 and may not be available in the future versions. Consider using a different execution engine (i.e. spark, tez) or using Hive 1.X releases.
+Query ID = hitman_20220204223306_3b36522f-5f57-4404-9c11-316c20b5f67d
+Total jobs = 3
+Launching Job 1 out of 3
+Number of reduce tasks is set to 0 since there's no reduce operator
+Starting Job = job_1643991542899_0001, Tracking URL = http://ubuntu:8088/proxy/application_1643991542899_0001/
+Kill Command = /home/hitman/DBDA_HOME/hadoop-3.3.1/bin/hadoop job  -kill job_1643991542899_0001
+Hadoop job information for Stage-1: number of mappers: 1; number of reducers: 0
+2022-02-04 22:33:58,138 Stage-1 map = 0%,  reduce = 0%
+2022-02-04 22:34:15,007 Stage-1 map = 100%,  reduce = 0%, Cumulative CPU 6.78 sec
+MapReduce Total cumulative CPU time: 11 seconds 270 msec
+Ended Job = job_1643991542899_0001
+Stage-4 is selected by condition resolver.
+Stage-3 is filtered out by condition resolver.
+Stage-5 is filtered out by condition resolver.
+Moving data to directory hdfs://127.0.0.1:9000/user/hive/warehouse/weather_data_partitioned/.hive-staging_hive_2022-02-04_22-33-06_863_5237030175262811246-1/-ext-10000
+Loading data to table default.weather_data_partitioned partition (cityname=null)
+
+Loaded : 158/158 partitions.
+         Time taken to load dynamic partitions: 17.551 seconds
+         Time taken for adding to write entity : 0.034 seconds
+MapReduce Jobs Launched: 
+Stage-Stage-1: Map: 1   Cumulative CPU: 11.27 sec   HDFS Read: 13641 HDFS Write: 16448 SUCCESS
+Total MapReduce CPU Time Spent: 11 seconds 270 msec
+OK
+Time taken: 226.241 seconds
+hive> select * from weather_data_partitioned;
+OK
+1643992589      290.95  1010    73      3.63    100     Agartala
+1643992597      292.18  1011    48      0.0     0       Ahmedabad
+1643992616      292.21  1011    48      0.0     0       Ahmedabad
+1643992618      284.37  1012    61      0.93    99      Aizawl
+1643992614      286.36  1012    24      1.41    0       Ajmer
+1643992596      298.17  1010    83      2.57    40      Alipur
+1643992652      283.58  1013    73      2.07    0       Alwar
+1643992598      282.25  1013    91      1.44    9       Ambala
+1643992638      282.08  1013    100     0.0     1       Amritsar
+1643992611      292.03  1012    26      1.79    0       Ankleshwar
+1643992631      300.35  1015    80      2.57    20      Anna Nagar
+1643992624      286.37  1012    88      5.37    97      Araria
+1643992630      292.61  1012    31      2.45    1       Aurangabad
+1643992591      295.4   1011    77      3.23    72      Azhikkal
+1643992633      296.15  1011    30      1.83    22      Bagalkot
+1643992635      286.22  1012    88      2.34    25      Bagpat
+1643992622      286.31  1012    80      1.71    1       Ballabgarh
+1643992645      286.3   1012    78      1.7     1       Ballabgarh
+1643992623      282.07  1013    90      2.51    0       Bathinda
+1643992619      296.76  1015    32      1.03    64      Bengaluru
+1643992643      296.99  1015    31      1.03    65      Bengaluru
+1643992633      286.58  1012    92      3.08    100     Bettiah
+1643992613      287.01  1012    91      3.43    93      Bhagalpur
+1643992604      285.88  1012    74      1.81    0       Bhiwadi
+1643992598      283.77  1013    70      2.96    0       Bhiwani
+1643992591      286.05  1013    41      0.0     0       Bhopal
+1643992593      285.11  1011    97      2.19    69      Bihar Sharif
+1643992599      296.53  1011    28      3.39    25      Bijapur
+1643992602      289.29  1012    28      3.48    0       Bilaspur
+1643992595      296.99  1011    60      2.06    4       Borivali
+1643992641      290.96  1011    40      3.33    0       Brajarajnagar
+1643992592      297.2   1012    54      3.27    3       Breach Candy
+1643992615      297.2   1012    54      3.27    3       Breach Candy
+1643992647      283.84  1012    81      2.6     2       Bulandshahr
+1643992603      285.0   1011    96      2.35    7       Buxar
+1643992627      291.12  1008    94      0.0     40      Chakapara
+1643992629      293.0   1011    24      1.94    0       Chanda
+1643992655      282.07  1013    88      1.39    9       Chandigarh
+1643992636      285.1   1011    96      2.23    65      Chapra
+1643992600      283.69  1013    71      1.68    0       Charkhi Dadri
+1643992588      295.25  1011    28      1.89    40      Chik Ballapur
+1643992602      288.66  1013    76      1.29    62      Chikmagalur
+1643992594      297.07  1011    60      2.06    4       Chinchpokli
+1643992604      300.4   1015    80      2.57    20      Chinnasekkadu
+1643992650      298.45  1012    29      1.64    75      Closepet
+1643992646      287.18  1012    28      1.53    0       Damoh
+1643992632      286.63  1012    90      3.9     98      Darbhanga
+1643992609      286.29  1012    77      1.98    7       Darya Ganj
+1643992630      292.79  1012    63      3.05    27      Davangere
+1643992651      285.11  1012    94      1.07    0       Dehri
+1643992614      285.19  1013    29      2.0     0       Dewas
+1643992635      289.35  1010    89      1.76    31      Durgapur
+1643992650      298.15  1010    83      0.0     20      Elur
+1643992617      282.7   1013    89      3.1     0       Fatehabad
+1643992639      283.83  1012    84      2.43    1       Firozabad
+1643992647      283.88  1012    77      2.44    0       Firozpur Jhirka
+1643992592      293.75  1012    55      3.86    14      Gadag
+1643992614      292.01  1011    48      0.0     0       Gandhinagar
+1643992649      286.33  1012    77      1.98    8       Gautam Budh Nagar
+1643992586      289.13  1011    88      0.0     75      Gaya
+1643992608      286.45  1012    61      3.19    0       George Town
+1643992644      286.21  1012    80      2.29    19      Ghaziabad
+1643992641      291.14  1008    94      0.0     40      Ghusuri
+1643992603      284.48  1011    95      2.47    15      Gorakhpur
+1643992621      296.15  1011    22      3.28    51      Gulbarga
+1643992591      300.31  1010    81      3.11    57      Gummidipundi
+1643992600      286.12  1012    100     0.0     40      Gurgaon
+1643992645      287.15  1012    100     2.06    75      Guwahati
+1643992634      285.39  1012    59      2.31    2       Gwalior
+1643992602      285.17  1010    94      3.09    40      Hajipur
+1643992651      285.11  1010    94      3.09    40      Hajipur
+1643992587      295.21  1009    78      6.51    23      Haldia
+1643992639      286.25  1012    83      2.71    30      Hapur
+1643992646      289.74  1013    75      3.47    45      Hassan
+1643992620      283.68  1013    81      3.29    0       Hisar
+1643992629      292.13  1012    71      2.97    16      Hubli
+1643992644      292.31  1014    45      1.03    20      Hyderabad
+1643992619      285.2   1014    50      1.54    0       Indore
+1643992613      287.68  1012    29      1.6     0       Jabalpur
+1643992610      282.53  1012    91      1.67    46      Jagadhri
+1643992588      287.62  1013    58      1.03    0       Jaipur
+1643992637      281.14  1013    91      1.86    14      Jalandhar
+1643992635      289.67  1011    79      4.05    56      Jamadoba
+1643992653      290.59  1010    83      2.16    49      Jaykaynagar
+1643992642      286.2   1012    61      3.11    0       Jhusi
+1643992594      282.44  1013    90      2.53    0       Jind
+1643992596      288.16  1012    77      1.71    1       Kakarmatha
+1643992605      297.09  1012    54      1.43    4       Kalyan
+1643992643      286.1   1012    75      3.41    0       Kanpur
+1643992640      282.26  1012    93      2.88    0       Karnal
+1643992610      286.05  1012    75      1.79    0       Kasan
+1643992606      286.44  1012    89      4.31    94      Katihar
+1643992626      281.38  1013    89      1.27    0       Khanna
+1643992588      286.2   1012    89      5.35    93      Kishanganj
+1643992628      281.07  1014    93      0.95    100     Kohima
+1643992648      295.72  1012    50      2.66    49      Kolar
+1643992607      291.14  1008    94      0.0     40      Kolkata
+1643992601      301.07  1011    78      4.07    4       Kollam
+1643992641      297.1   1011    60      2.06    4       Konkan Division
+1643992597      296.15  1011    31      1.08    17      Koppal
+1643992627      287.96  1012    26      1.79    0       Kota
+1643992586      293.89  1011    93      0.74    11      Kovvur
+1643992626      298.7   1011    76      3.56    96      Kozhikode
+1643992587      292.05  1014    45      1.03    28      Kukatpalli
+1643992590      286.16  1012    94      1.03    75      Lucknow
+1643992654      286.14  1012    94      1.03    75      Lucknow
+1643992616      281.17  1013    90      1.69    5       Ludhiana
+1643992609      285.81  1014    91      0.73    69      Madikeri
+1643992624      297.2   1012    73      2.57    48      Madukkarai
+1643992619      285.89  1012    39      1.48    0       Maihar
+1643992634      286.64  1013    28      1.62    0       Mandideep
+1643992616      297.46  1011    64      2.06    55      Mangalore
+1643992636      285.11  1011    96      2.03    57      Masaurhi Buzurg
+1643992637      283.89  1012    87      2.39    37      Meerut
+1643992587      283.57  1012    90      1.77    26      Moradabad
+1643992625      283.53  1012    89      1.52    23      Moradabad
+1643992596      286.68  1012    90      3.73    97      Mothihari
+1643992595      287.07  1012    92      2.0     100     Munger
+1643992607      286.7   1013    30      0.88    0       Murwara
+1643992593      282.97  1012    93      1.56    32      Muzaffarnagar
+1643992632      285.12  1011    92      4.29    96      Muzaffarpur
+1643992649      285.12  1011    92      4.26    96      Muzaffarpur
+1643992633      292.5   1012    61      2.49    82      Mysore
+1643992653      291.55  1014    64      1.01    65      Naduvattam
+1643992653      290.11  1013    39      1.54    0       Nagpur
+1643992623      287.26  1015    84      2.09    100     Naharlagun
+1643992622      283.6   1013    63      1.14    0       Narnaul
+1643992606      289.54  1013    44      1.97    0       Nashik
+1643992628      289.77  1011    27      3.02    0       Pali
+1643992617      281.53  1013    92      1.88    1       Patiala
+1643992621      285.1   1010    94      3.09    40      Patna
+1643992608      297.76  1010    56      3.29    50      Perundurai
+1643992650      286.23  1012    100     0.0     40      Pitampura
+1643992647      284.86  1014    50      1.54    0       Pithampur
+1643992615      298.09  1010    78      4.22    52      Puducherry
+1643992648      296.91  1011    27      2.78    35      Raichur
+1643992600      289.43  1011    96      1.36    54      Rajgir
+1643992625      289.55  1011    20      0.69    0       Ratanada
+1643992606      289.37  1012    22      1.2     0       Ratlam
+1643992645      281.91  1013    86      0.64    11      Ropar
+1643992631      286.55  1012    90      4.34    100     Saharsa
+1643992654      286.11  1012    45      1.79    0       Satna
+1643992651      286.85  1012    30      1.83    0       Saugor
+1643992618      277.03  1012    93      4.17    100     Shillong
+1643992590      290.77  1013    86      1.22    25      Shimoga
+1643992622      284.18  1012    81      1.96    1       Sikandra
+1643992642      286.06  1012    87      2.4     100     Siliguri
+1643992611      292.0   1012    30      1.85    33      Singapur
+1643992640      282.92  1013    88      3.16    0       Sirsa
+1643992599      296.93  1011    24      3.32    36      Solapur
+1643992626      286.21  1013    89      2.22    9       Sonipat
+1643992604      273.7   1019    55      1.67    2       Srinagar
+1643992652      298.15  1011    93      1.92    31      Tadepalle
+1643992620      293.01  1010    57      1.64    14      Talcher
+1643992629      300.92  1010    74      5.14    20      Technopark
+1643992605      297.01  1011    60      2.06    4       Thane
+1643992589      282.19  1013    93      2.14    1       Thanesar
+1643992643      298.1   1011    89      1.08    42      Thrissur
+1643992601      290.18  1011    87      1.85    25      Tirumala
+1643992593      287.46  1013    28      1.9     0       Udaipur
+1643992597      285.64  1013    27      2.03    0       Ujjain
+1643992639      291.67  1012    20      0.81    0       Vadodara
+1643992612      292.15  1012    49      0.54    0       Vapi
+1643992631      297.19  1012    56      2.49    3       Virar
+1643992624      283.58  1012    84      3.31    0       Vrindavan
+1643992638      296.3   1011    28      2.54    25      Yadgir
+Time taken: 0.584 seconds, Fetched: 166 row(s)
+hive> 
+
